@@ -1,0 +1,935 @@
+---
+title: "Impactos das barragens"
+author: "Darren Norris"
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2:
+    toc: yes
+    toc_depth: 3
+    number_sections: yes
+    extra_dependencies: flafter
+    highlight: tango
+    includes:
+      in_header: preamble.txe
+  bookdown::html_document2:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    fig_caption: yes
+urlcolor: blue
+toc-title: Sumário
+header-includes:
+  - \counterwithin{figure}{section}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(
+  echo = TRUE, collapse = TRUE,
+  comment = "#>" 
+  )
+def_hook <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  out <- def_hook(x, options)
+  return(paste("\\begin{framed}\\begin{verbatim}", x, "\\end{verbatim}\\end{framed}", collapse = "\n"))
+})
+```
+
+\newpage{}
+
+# Apresentação
+As métricas da paisagem nos ajudam a entender as mudanças na paisagem de diferentes perspectivas (visual, ecológica, cultural). Asssim sendo, análises com métricas de paisagem é um atividade fundamental na ecologia da paisagem. Nesta aula (https://rpubs.com/darren75/metricas) aprenderemos sobre como analisar a cobertura da terra com métricas de paisagem em R. As tecnicas será ilustrada através cálculos usando a cobertura florestal ao redor do Rio Araguari. Ao longo do caminho, revisaremos modelos lineares e não lineares, aprenderemos sobre manipulação de dados em R e aprenderemos como criar gráficos com o pacote ggplot2.
+
+Durante a aula você aprenderá a:  
+
+ * Importar e plotar dados raster em R e mapear locais de amostragem com os pacotes [terra](https://rspatial.org/pkg/index.html), [sf](https://cran.r-project.org/web/packages/sf/vignettes/sf1.html) e [tmap](https://r-tmap.github.io/tmap/).  
+ 
+ * Calcular métricas de paisagem com o pacote [landscapemetrics](https://r-spatialecology.github.io/landscapemetrics/).  
+ 
+ * Calcular métricas de paisagem em locais de amostragem e dentro de um buffer ao redor deles (comparação multiescala).  
+ 
+ * Construir gráficos com o pacote [ggplot2](https://ggplot2.tidyverse.org/).
+
+ 
+
+# Codigo e R
+Objetivo não é de apresentar detalhes sobre os métodos ou os funções no [R](https://cran.r-project.org/). Existem diversos exemplos disponíveis para que vocês podem obter ajudar e mais detalhes sobre manipulação, visualização de dados e análises no R, por exemplo:  
+
+ * livros online:  
+  
+    * [Análises Ecológicas no R](https://analises-ecologicas.com/index.html) desenvolvidos pelos professores durante aulas de graduação e cursos de pós-graduação nas universidades de UNESP, UFSCAR, UFRPE, UFMS, e UFRN. Capitulo 15 [Dados geoespaciais](https://analises-ecologicas.com/cap15.html) tem exemplos de geoprocessamento passo a passo com o pacote mais antiga "raster", visualização de dados geoespaciais e exemplos de aplicações de análises geoespaciais para dados ecológicos.
+    
+    * [Introdução ao R](https://bookdown.org/wevsena/curso_r_tce/curso_r_tce.html)  curso de capacitação para servidores do Tribunal de Contas do Estado da Paraíba.
+ 
+    * [Ciência de Dados com R](https://cdr.ibpad.com.br/)  desenvolvido pelo  Instituto Brasileiro de Pesquisa e Análise de Dados (IBPAD).  
+    
+    * [Ciência de Dados em R](https://livro.curso-r.com/index.html) desenvolvido durante Cursos de Verão do Instituto de Matemática e Estatística da Universidade de São Paulo (IME-USP).
+
+
+ * Tutoriais e exemplos online através buscas com Google, sempre da preferência para exemplos mais recentes porque o código e os pacotes estão sempre avançando. Exemplo buscando com "r cran introdução tutorial".....  tem mais de 50 mil resultados com exemplos, imagens e videos ......  
+ 
+ * Grupos de ajuda, como por exemplo:  
+ 
+    * [R Brasil](https://www.facebook.com/groups/rbrasilprogramadores/)  
+
+    * [Stack Overflow em Português](https://pt.stackoverflow.com/questions/tagged/r)
+
+ > O objetivo é  de apresentar um tutorial mostrado os capacidades e opções para desenvolver e integrar pesquisas de ecologia da paisagem no ambiente estatística de [R](https://cran.r-project.org/)
+
+Porque use R? R tem a capacidade (baseada em codigo) para alternar  entre tarefas de processamento, modelagem e visualização de dados geográficos e não geográficos. Além disso, como é possível importar, modificar, analisar e visualizar dados espaciais no mesmo ambiente com script/código, o R permite fluxos de trabalho transparentes e reproduzíveis ([A Ciência Aberta](https://foster.gitbook.io/manual-de-formacao-em-ciencia-aberta/02introducaoacienciaaberta/01conceito_e_principios_da_ciencia_aberta)).
+
+
+> Aliás, atualmente a grande maioria dos artigos científicos publicados na revista [Landscape Ecology](https://www.springer.com/journal/10980/) incluir análises usando R.
+
+\newpage
+
+## Organização do codigo no tutorial
+O tutorial está organizado em etapas de processamento, com blocos de código em caixas cinzas:
+```{r, eval=FALSE}
+codigo de R para executar
+```
+
+Para segue os passos, os blocos de código precisam ser executados em sequência. Se você pular uma etapa, ou rodar fora de sequência o próximo bloco de código provavelmente não funcionará.
+
+As linhas de codigo de R dentro de cada caixa tambem preciso ser executados em sequência. O simbolo `r kableExtra::text_spec("#", bold = TRUE)` é usado para incluir comentarios sobre os passos no codgio. Ou seja, linhas começando com  `r kableExtra::text_spec("#", bold = TRUE)` são ignorados por R, e não é codigo de executar.
+
+```{r, eval=FALSE}
+# Passo 1
+codigo de R passo 1 # texto e numeros tem cores diferentes
+# Passo 2
+codigo de R passo 2
+# Passo 3
+codigo de R passo 3
+```
+
+Alem disso, os simbolos `r kableExtra::text_spec("#>", bold = TRUE)` e/ou `r kableExtra::text_spec("[1]", bold = TRUE)` no início de uma linha indica o resultado que você verá no console de R depois de rodar o codigo, como no proximo exemplo. Digite o código abaixo e veja o resultados (passos 1 a 4).
+
+
+```{r, echo=TRUE, results='asis', evaluate = TRUE, collapse = TRUE}
+# Passo 1
+1+1
+
+# Passo 2
+x <- 1+1
+# Passo 3
+x
+
+# Passo 4
+x + 1
+
+```
+
+
+\newpage
+
+# Métricas da paisagem e pacote "landscapemetrics"
+
+As métricas de paisagem são a forma que os ecólogos de paisagem usam para descrever os padrões espaciais de paisagens para depois avaliar a influência destes padrões espaciais nos padrões e processos ecológicos.
+ 
+
+[landscapemetrics](https://r-spatialecology.github.io/landscapemetrics/) tem funções para calcular métricas de paisagem em paisagems categóricos (onde tem uma classificação de cobertura de terra/habitat - modelo mancha-corredor-matriz), em um fluxo de trabalho organizado. O pacote pode ser usado como um substituto do FRAGSTATS ([McGarigal et al. 1995](https://doi.org/10.2737/PNW-GTR-351),  https://doi.org/10.2737/PNW-GTR-351), pois oferece um fluxo de trabalho reproduzível para análise de paisagem em um único ambiente (Professor McGarigal se aposentou, então FRAGSTATS não é mais apoiado).
+[landscapemetrics](https://r-spatialecology.github.io/landscapemetrics/) também permite cálculos de quatro métricas teóricas de complexidade da paisagem:  entropia marginal, entropia condicional, entropia conjunta e informação mútua ([Nowosad e Stepinski 2019](https://doi.org/10.1007/s10980-019-00830-x) https://doi.org/10.1007/s10980-019-00830-x).
+
+Nesse pacote o formato geral para uma função é o seguinte "lsm_nível_métrica":  
+
+ * A primeira parte é sempre lsm_ ("landscapemetric"), seguinda do “nível_” e por fim a “métrica”. Ou seja, todas as funções que calculam métricas 
+ começam com lsm_ .......   
+
+ * Daí você deve incluir o nível da análise “p” para patch (ou seja, para a mancha/fragmento), “c” para classe e “l” para landscape ou seja, métricas para a paisagem como um todo.  
+
+ * E daí existem inúmeras métricas, como por exemplo a `r kableExtra::text_spec("cpland", background = "#dedede")` que é o percentual de área central - “core area” na paisagem, como vimos na aula teórica. Assim sendo, a função `r kableExtra::text_spec("lsm_c_cpland", background = "#dedede")` vai calacular a métrica porcentagem da área central em cada classe. Lembrando existem metricas que podem se calculados nos trés niveis, e metricas que so pode se calculados somente para um nivel espcifco.  
+
+## Pacotes
+
+Além do "landscapemetrics", precisamos carregar alguns pacotes a mais para facilitar a organização e apresentação de dados espaciais (vector e raster) e os resultados.
+
+Carregar pacotes (que deve esta instalado antes): 
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(sf)
+library(raster)
+library(terra)
+library(tmap)
+library(gridExtra)
+library(kableExtra)
+library(mapview)
+library(mgcv)
+library(landscapemetrics)
+```
+
+
+\newpage
+
+# Dados
+
+Existem varios formas de importar e exportar dados geoespaciais.
+Aqui, precisamos o arquivo com os dados de MapBiomas "utm_cover_AP_rio_2020.tif", que voces baixaram no tutorial anterior (tutorial Escala https://rpubs.com/darren75/escala).
+
+Link: [https://github.com/darrennorris/gisdata/blob/master/inst/raster/mapbiomas_AP_utm_rio/utm_cover_AP_rio_2020.tif](https://github.com/darrennorris/gisdata/blob/master/inst/raster/mapbiomas_AP_utm_rio/utm_cover_AP_rio_2020.tif){target="_blank"} 
+
+Lembrando-se de salvar o arquivo ("utm_cover_AP_rio_2020.tif") em um local conhecido no seu computador. Agora, nós podemos carregar os dados de cobertura da terra "utm_cover_AP_rio_2020.tif" com a função <code>rast</code>.
+```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
+# Selecionar e carregar arquivo "utm_cover_AP_rio_2020.tif"
+mapbiomas_2020 <- rast(file.choose())
+# Reclassificação - 
+# Criar uma nova camada de floresta (novo objeto de raster copiando mapbiomas_2020, 
+# assim para ter os mesmos coordenados, resolução e extensão)
+floresta_2020 <- mapbiomas_2020
+# Todos os pixels com valor de 0
+values(floresta_2020) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2020[mapbiomas_2020==3 | mapbiomas_2020==4] <- 1 
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+rin <- "data/mapbiomas_AP_utm_rio/utm_cover_AP_rio_2020.tif"
+mapbiomas_2020 <- rast(rin)
+# Reclassificação - 
+# Criar uma nova camada de floresta (novo objeto de raster copiando mapbiomas_2020, 
+# assim para ter os mesmos coordenados, resolução e extensão)
+floresta_2020 <- mapbiomas_2020
+# Todos os pixels com valor de 0
+values(floresta_2020) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2020[mapbiomas_2020==3 | mapbiomas_2020==4] <- 1 
+```
+
+Plotar para verificar, incluindo nomes e os cores para classes de floresta (valor = 1) e não-floresta (valor = 0).
+
+```{r, eval = FALSE}
+# Passo necessario para agilizar o processamento
+floresta_2020_modal<-aggregate(floresta_2020, fact=10, fun="modal")
+# Plot
+tm_shape(floresta_2020_modal) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", "1" ="#129912"), legend.show = FALSE) + 
+  tm_add_legend(type = "fill", labels = c("não-floresta", "floresta"),
+    col = c("#E974ED", "#129912"), title = "Classe") + 
+tm_layout(legend.bg.color = "white")
+```
+
+Se esta todo certo, voces devem ter uma imagem assim:
+
+```{r, echo = FALSE, fig.width=5, fig.height=5, fig.cap="Floresta ao redor do Rio Araguari. MapBiomas 2020 reclassificado em floresta e não-floresta."}
+# Passo necessario para agilizar o processamento
+floresta_2020_modal<-aggregate(floresta_2020, fact=10, fun="modal")
+# Plot
+tm_shape(floresta_2020_modal) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", "1" ="#129912"), legend.show = FALSE) + 
+  tm_add_legend(type = "fill", labels = c("não-floresta", "floresta"),
+    col = c("#E974ED", "#129912"), title = "Classe") + 
+tm_layout(legend.bg.color = "white")
+```
+
+## Exibir dados raster e sobreposição com locais de amostragem
+Agora temos a paisagem, precisamos tambem a região de interesse (area de estudo). Por isso, precisamos carregar os dados de rios que usamos no tutorial [Escala](https://rpubs.com/darren75/escala) - arquivo "rivers.GPKG". 
+
+Baixar o arquivo Link: [https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG](https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG){target="_blank"} .
+Lembrando-se de salvar o arquivo ("rivers.GPKG")  em um local conhecido no seu computador. 
+
+Agora, com o proximo bloco de codigo, podemos selecionar o arquivo "rivers.GPKG", e carregar as camadas necessarios.
+
+No exemplo, usamos `r kableExtra::text_spec("%>%", bold = TRUE)`, que estabelece a ligação entre os passos do processo. Ou seja, `r kableExtra::text_spec("%>%", bold = TRUE)` passa o objeto resultante automaticamente para a próxima função como primeiro argumento. 
+Primeiramente carregamos os dados e em seguida converter (reprojeção) as coordenadas para o mesmo sistema de referência que o arquivo raster (com a função st_transform). 
+
+```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+rivers <- "data/vector/rivers.gpkg"
+sf::st_layers(rivers)
+# linha central de rios
+rio_31976 <- sf::st_read(rivers, layer = "centerline") %>% 
+  st_transform(31976) 
+barragem_31976 <- sf::st_read(rivers, layer = "cachoeira_caldeirao") %>% 
+  st_transform(31976) 
+ada_31976 <- sf::st_read(rivers, layer = "direct_affect") %>% 
+  st_transform(31976) 
+ada_31976_linha <- sf::st_read(rivers, layer = "direct_affect_line") %>% 
+  st_transform(31976) 
+```
+
+
+```{r, eval=FALSE, message=FALSE, results = FALSE}
+#  Selecionar o arquivo "rivers.GPKG",
+rivers <- file.choose()
+# Carregar linha central de rios, camada centerline
+rio_31976 <- sf::st_read(rivers, layer = "centerline") %>% 
+  st_transform(31976) 
+# Carregar ponto da barragem
+barragem_31976 <- sf::st_read(rivers, layer = "cachoeira_caldeirao") %>% 
+  st_transform(31976) 
+# Carregar Área Diretamente Afetada (ADA) poligono
+ada_31976 <- sf::st_read(rivers, layer = "direct_affect") %>% 
+  st_transform(31976) 
+# Carregar Área Diretamente Afetada (ADA) linha
+ada_31976_linha <- sf::st_read(rivers, layer = "direct_affect_line") %>% 
+  st_transform(31976) 
+```
+
+\newpage
+
+Visualizer para verificar. 
+```{r, eval=FALSE}
+# Passo necessario para agilizar o processamento
+floresta_2020_modal<-aggregate(floresta_2020, fact=10, fun="modal")
+# Plot
+tm_shape(floresta_2020_modal) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", "1" ="#129912"), legend.show = FALSE) + 
+  tm_add_legend(type = "fill", labels = c("não-floresta", "floresta"),
+    col = c("#E974ED", "#129912"), title = "Classe") + 
+tm_shape(rio_31976) + 
+  tm_lines(col="blue") + 
+tm_shape(ada_31976_linha) + 
+  tm_lines(col = "yellow") + 
+  tm_shape(barragem_31976) + 
+  tm_dots(size=0.5, col = "yellow") + 
+tm_layout(legend.bg.color="white")
+```
+
+Depois de executar ("run") o código acima, você deverá ver a figura a seguir.
+
+```{r, echo=FALSE, fig.width=5, fig.height=5, fig.cap="Cobertura da terra ao redor do Rio Araguari em 2020. Mostrando a barragem cachoeira Caldeirão (ponto amarela), Área Diretamente Afetada (linha amarela) e o rio (linha azul)."}
+# Passo necessario para agilizar o processamento
+floresta_2020_modal<-aggregate(floresta_2020, fact=10, fun="modal")
+# Plot
+tm_shape(floresta_2020_modal) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", "1" ="#129912"), legend.show = FALSE) + 
+  tm_add_legend(type = "fill", labels = c("não-floresta", "floresta"),
+    col = c("#E974ED", "#129912"), title = "Classe") + 
+tm_shape(rio_31976) + 
+  tm_lines(col="blue") + 
+tm_shape(ada_31976_linha) + 
+  tm_lines(col = "yellow") + 
+  tm_shape(barragem_31976) + 
+  tm_dots(size=0.5, col = "yellow") + 
+tm_layout(legend.bg.color="white")
+```
+
+--------------------------------------------
+
+
+\newpage
+
+
+# Calculo de métricas
+Para ilustrar como rodar as funções e cálculos com landscapemetrics, vamos calcular a área central na paisagem. Vamos estudar uma classe (floresta), portanto vamos incluir as métricas para nível de classe. Além disso, as métricas de paisagem em nível de classe são mais eficazes na definição de processos ecológicos (Tischendorf, L. Can landscape indices predict ecological processes consistently?. Landscape Ecology 16, 235–254 (2001). 
+https://doi.org/10.1023/A:1011112719782.).
+
+Para calcular as métricas de paisagem dentro de um certo buffer em torno de pontos de amostra, existe a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")`. Através da função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` podemos calcular mais de 50 métricas da paisagem, dentro de extensões (raios/distancias) diferentes.
+
+
+##  Região único, métrica única
+
+Métricas de área central ("core area") são consideradas medidas da qualidade de hábitat, uma vez que indica quanto existe realmente de área efetiva de um fragmento, após descontar-se o efeito de borda. Vamos calcular a percentual de área central ("core area") no entorno de um ponto de amostragem. Isso seria, a percentual de áreas centrais (excluídas as bordas de 30 m) de cada classe em relação à área total da paisagem.
+
+Vamos represntar a região de interesse com um sequencia de buffers ao redor da 
+Área Diretamente Afetada.
+Agora temos a paisagem, precisamos tambem a região de interesse (area de estudo). Por isso, precisamos carregar os dados de rios que usamos no tutorial [Escala](https://rpubs.com/darren75/escala) - arquivo "rivers.GPKG". 
+
+Baixar o arquivo Link: [https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG](https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG){target="_blank"} .
+Lembrando-se de salvar o arquivo ("rivers.GPKG")  em um local conhecido no seu computador. 
+
+
+
+Para os calculos aqui usamos a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` .
+
+Para a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` funcionar, precisamos informar 
+(i) a paisagem (arquivo de raster), (ii) regiao de interesse (poligono) e (iii) a métrica  desejada. Cada opção tem especificações particulares assim para que a função pode receber dados em formatos diferentes e produzir resultados conforme as necessidades de diversos casos. 
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+minha_amostra_1000 <- sample_lsm(landscape = floresta_2020, 
+                                 y = rsm_31976[1, ], 
+                            size = 1000, shape = "circle", 
+                            metric = "cpland", 
+                            edge_depth = 1) 
+```
+
+Depois que executar ("run"), podemos olhar os dados com o codigo a seguir. 
+Os dados deve ter os valores (coluna value) da métrica (coluna metric) de cada classe (coluna class):
+```{r, eval=FALSE}
+minha_amostra_1000
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+minha_amostra_1000 %>% 
+  kbl() %>%
+  kable_styling(full_width = F,  latex_options = "hold_position")
+```
+
+### Pergunta 2
+
+`r kableExtra::text_spec("O modelo mancha-corredor-matriz é frequentemente adotado na ecologia da paisagem. Com base nas aulas teóricas e usando os valores no objeto minha_amostra_1000 apresentados na tabela acima, identificar qual classe representar a matriz na paisagem. Há alguma informação faltando que limita a sua capacidade de identificar qual classe representar a matriz? Se sim, o que precisa ser adicionado? Justifique as suas respostas de forma clara e concisa.", color = "blue", bold = TRUE)`
+
+----------------------------------------------------------------
+
+
+\newpage
+
+## Ponto único, distâncias variados, métrica única
+
+```{r, echo=FALSE, message=FALSE, out.width="90%", out.height="90%",fig.cap="Cobertura florestal em extensões diferentes ao redor de um ponto de amostragem."}
+# 1000 m
+rsm_31976_b1000 <- st_buffer(rsm_31976[1, ], dist = 1000)
+# 2000 m
+rsm_31976_b2000 <- st_buffer(rsm_31976[1, ], dist = 2000)
+# 4000 m
+rsm_31976_b4000 <- st_buffer(rsm_31976[1, ], dist = 4000)
+# 8000 m
+rsm_31976_b8000 <- st_buffer(rsm_31976[1, ], dist = 8000)
+# 16000 m
+rsm_31976_b16000 <- st_buffer(rsm_31976[1, ], dist = 16000)
+buffer.forest1.16000m <- crop(floresta_2020, rsm_31976_b16000)
+buffer.forest1.16000m <- mask(buffer.forest1.16000m, rsm_31976_b16000)
+
+#fig all together
+line_col <- "black"
+fig_together <- tm_shape(buffer.forest1.16000m) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", 
+                        "1" ="#129912"), legend.show = FALSE) + 
+  tm_shape(rsm_31976[1, ]) + 
+    tm_symbols(shape =21, col = "yellow", 
+            border.col = "black", border.lwd = 0.2, size=0.5) + 
+  tm_shape(rsm_31976_b1000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b2000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b4000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b8000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b16000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_add_legend(type = "fill", 
+    labels = c("não-floresta", "floresta"),
+    col = c("#E974ED", "#129912"),
+    title = "Classe") + 
+tm_scale_bar(breaks = c(0, 2, 4), text.size = 1, 
+             position=c("left", "bottom")) +
+tm_layout(legend.position = c("right","top"),
+          legend.bg.color = "white")
+fig_together
+```
+
+
+Para uma comparação multiescala, vamos calcular a mesma métrica, no mesmo ponto, mas agora com extensões diferentes. Continuando o exemplo no tutorial anteriio (Escala), vamos repetir o mesmo processo, mas agora com raios de 250, 500, 1000, 2000, 4000, 8000 e 16000 metros, doubrando a escala (extensão) em cada passo. 
+
+\newpage
+
+Para obter resultados com extensões diferentes, precisamos primeiramente repetir o código, ajustando para cada extensão, e depois juntar os resultados. 
+O código a seguir calculará a mesma métrica para as diferentes distâncias.
+No exemplo, usamos `r kableExtra::text_spec("%>%", bold = TRUE)`, que estabelece a ligação entre os passos do processo. Neste caso, para incluir uma coluna nova (raio) para manter o valor das diferentes distâncias.
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# raio 250 metros
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 250, shape = "circle", 
+           metric = "cpland") %>% 
+  mutate(raio = 250) -> minha_amostra_250 
+# raio 500 metros
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 500, shape = "circle", 
+           metric = "cpland")  %>% 
+  mutate(raio = 500) -> minha_amostra_500
+# raio 1 km (1000 metros)
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 1000, shape = "circle", 
+           metric = "cpland")  %>% 
+  mutate(raio = 1000) -> minha_amostra_1000
+# raio 2 km
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 2000, shape = "circle", 
+           metric = "cpland") %>% 
+  mutate(raio = 2000) -> minha_amostra_2000
+# raio 4 km
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 4000, shape = "circle", 
+           metric = "cpland")  %>% 
+  mutate(raio = 4000) -> minha_amostra_4000
+# raio 8 km
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 8000, shape = "circle", 
+           metric = "cpland")  %>% 
+  mutate(raio = 8000) -> minha_amostra_8000
+# raio 16 km
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 16000, shape = "circle", 
+           metric = "cpland")  %>% 
+  mutate(raio = 16000) -> minha_amostra_16000
+```
+
+\newpage
+
+E agora, o código a seguir juntará os resultados das diferentes extensões.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+bind_rows(minha_amostra_250, 
+          minha_amostra_500, 
+          minha_amostra_1000, 
+          minha_amostra_2000, 
+          minha_amostra_4000, 
+          minha_amostra_8000, 
+          minha_amostra_16000) -> amostras_metrica
+
+```
+
+
+Depois que executar ("run"), podemos olhar os dados "amostras_metrica" com o codigo a seguir. 
+```{r, eval=FALSE}
+amostras_metrica
+```
+
+Os dados deve ter os valores (coluna value) da métrica (coluna metric) de cada classe (coluna class) para cada distância (coluna raio):
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+amostras_metrica %>% 
+  mutate_if(is.numeric, format, digits=1,nsmall = 0) %>%
+  kbl() %>%
+  kable_styling(full_width = F,  latex_options = "hold_position")
+```
+
+\newpage
+
+
+### Faça um gráfico
+
+
+```{r, insert-fig-logo, echo=FALSE, message=FALSE, warning=FALSE, out.width="65%", out.height="65%", fig.align="center"}
+knitr::include_graphics("www/logo_gg_lsm.png")
+
+
+```
+
+Uma imagem vale mais que mil palavras. Portanto, gráficos/figuras/imagens são uma das mais importantes formas de comunicar a ciência. Os dados apresentados em uma tabela podem ser difíceis de entender. Portanto, a primeira pergunta que você deve se fazer é se você pode transformar aquela tabela (chata e feia) em algum tipo de gráfico. Lembrando, sempre pode incluir a tabela como anexo. 
+
+Aqui, vamos fazer um grafico com os dados amostras_metrica,
+usando o pacote [ggplot2](https://ggplot2.tidyverse.org/index.html).
+
+O ggplot2 faz parte do conjunto de pacotes [tidyverse](https://tidyverse.tidyverse.org/articles/paper.html), e é um pacote de visualização de dados. "gg" se refere a uma gramática de gráficos. A ideia principal é criar um gráfico como se fosse uma frase, onde cada elemento do gráfico seria uma palavra, organizados em uma sequencia logica para construir uma frase completo (gráfico final). Você fornece os dados, informa ao ggplot2 como mapear variáveis para estética, quais tipos/formatos gráficas usar e ele cuida dos detalhes.
+
+Isto nos permite construir gráficos tão complexos quanto quisermos. Os gráficos criados com ggplot2 são, em geral, mais elegantes do que os gráficos tradicionais do R. Para mais exemplos e tutoriais com mais detalhes veja os capitulos sobre ggplot2 nos livros:  
+
+ * [Ciência de Dados com R](http://sillasgonzaga.com/material/cdr/ggplot2.html)  
+ * [Análises Ecológicas no R](https://analises-ecologicas.com/cap6.html)
+
+ * No livro em ingles [R Graphics Cookbook](https://r-graphics.org/) . 
+
+ * E sempre pode buscar exemplos no Google, por exemplo digitando: ggplot2 grafico de barra no Google, tem mais de 50 mil resultados com  paginas de imagens, codigo pronto e exemplos no YouTube.
+
+O ggplot2 exige que os dados a serem plotados estejam em um "dataframe" ([tabela de dados](https://bookdown.org/wevsena/curso_r_tce/curso_r_tce.html#data-frames-e-tibbles)). Ou seja, sempre teremos que transformar os dados para dataframe ou construir um dataframe com os dados que possuímos. Dataframe é um formato comum e fácil de trabalhar. Por exemplo, se você importar uma planilha de dados, o resultado seria como dataframe (para mais detalhes veja [Estrutura e manipulação de objetos](https://analises-ecologicas.com/cap4.html#estrutura-e-manipula%C3%A7%C3%A3o-de-objetos) e [lendo dados](http://sillasgonzaga.com/material/cdr/lendo-os-dados.html) ). Além disso, o resultado dos funções de [landscapemetrics](https://r-spatialecology.github.io/landscapemetrics/) é sempre um dataframe, ou seja os resultados da função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` são prontos para um grafico.
+
+\newpage
+O principal função a ser utilizado é `r kableExtra::text_spec("ggplot()", background = "#dedede")`. 
+Para ggplot, precisamos os dados (dataframe), e depois cria o “mapeamento” das variáveis, normalmente usando `r kableExtra::text_spec("aes", background = "#dedede")` (de aesthetics). Ou seja, você especifica quais são as variáveis dos eixos x e y dentro de `r kableExtra::text_spec("aes()", background = "#dedede")`. Através dele vamos definir qual é a variável preditora/explanatora (eixo x) e qual é a variável resposta (eixo y) em nosso conjunto de dados.
+Depois da função `r kableExtra::text_spec("ggplot()", background = "#dedede")`, na sequencia no codigo nós especificamos qual tipo de grafico com um "geom". Por exemplo, `r kableExtra::text_spec("geom_point()", background = "#dedede")` para plotar pontos, `r kableExtra::text_spec("geom_boxplot()", background = "#dedede")`  para um boxplot, etc. Para a lista completa de geoms e todas as outras opções do pacote, visite a página do projeto ggplot2 https://ggplot2.tidyverse.org/index.html .
+
+Aqui vamos fazer um gráfico com valores de extensão no eixo x e proporção da floresta central no eixo y.
+Assim sendo, com o codigo a segir, vamos informar (i) os dados, selecionando classe de floresta atraves de um filtro e acresentando uma coluna nova ("ext_m") com a extensão em metros, (ii) as colunas para os eixos x e y, (iii) tipo de grafico (grafico de pontos - `r kableExtra::text_spec("geom_point()", background = "#dedede")` e grafico de linha - `r kableExtra::text_spec("geom_line()", background = "#dedede")`), (iv) nomes para os eixos. No exemplo, usamos `r kableExtra::text_spec("%>%", bold = TRUE)`, que estabelece a ligação entre os passos do processo, ligando os dados (amostras_metrica) e o grafico `r kableExtra::text_spec("ggplot", background = "#dedede")`. Note que no codigo a seguir, adicionamos um geom com um “+”. No ggplot2, nós criamos gráficos em camadas, e adicionamos camada a camada com um “+”. Assim, é posivel ajustar qualquer elemento do grafico.
+```{r, eval=FALSE}
+# arrumar os dados
+amostras_metrica %>% 
+  filter(class==1) %>% mutate(ext_m = 2*raio) %>%
+# fazer o grafico
+  ggplot(aes(x=ext_m, y=value)) + 
+  geom_point() +  geom_line() +
+  labs(x = "Extensão (metros)", 
+       y = "Área central de floresta (porcentagem da paisagem)")
+```
+
+Depois de executar (“run”) o código acima, você deverá ver o grafico a seguir.
+```{r, echo=FALSE, out.width="50%", out.height="50%", fig.align="center"}
+amostras_metrica %>% 
+  filter(class==1) %>% mutate(ext_m = 2*raio) %>%
+  ggplot(aes(x=ext_m, y=value)) + 
+  geom_point() + geom_line() +
+  labs(x = "Extensão (metros)", 
+       y = "Área central de floresta (porcentagem da paisagem)") + 
+  theme(text = element_text(size = 14))
+```
+
+### Pergunta 3
+`r kableExtra::text_spec("Em vez de extensão, você preciso incluir o tamanho (área do circulo) correspondente a cada raio. Incluir uma cópia do código ajustado para produzir uma figura com tamanho (área em quilômetros quadrados) no eixo x.", color = "blue", bold = TRUE)`
+
+--------------------------------------------
+
+\newpage
+
+
+### Faça um gráfico elegante
+
+Podemos ajustar qualquer elemento do grafico com ggplot2. Agora, vamos mudar as unidades de metros para quilometros, aumentar o tamanho dos pontos, incluir uma linha reta para ilustrar a tendência geral, colocar o titulo longo do eixo y em duas linhas, e aumentar o tamanho da fonte para o texto ficar mais claro. 
+```{r, out.width="55%", out.height="55%", fig.cap="Comparação da área central de floresta em diferentes extensões.", fig.align="center" }
+# arrumar os dados
+amostras_metrica %>% 
+  filter(class==1) %>% 
+  mutate(ext_m = 2*raio, 
+         ext_km = (2*raio)/1000) %>%
+# fazer o grafico
+  ggplot(aes(x=ext_km, y=value)) + 
+  geom_point(size = 4) + 
+  geom_line() +
+  stat_smooth(method = "lm", se = FALSE, color = "green", 
+              linetype = "dashed") + 
+  labs(x = "Extensão (quilômetros)", 
+       y = "Área central de floresta\n(porcentagem da paisagem)") + 
+  theme(text = element_text(size = 18)) 
+```
+
+### Pergunta 4
+
+`r kableExtra::text_spec("Em menos de 200 palavras apresente a sua interpretação do gráfico em figura 5.2.", color = "blue", bold = TRUE)`
+
+-----------------------------------------
+
+
+\newpage
+
+### Modelos linear e não linear
+
+Um dos desafios mais frequentes é como melhor representar os dados observados para gerar evidências científicas robustas e informações confiáveis. Nós vimos que as mudancas na métrica porcentagem de área central de floresta não segue uma linha reta em relação de escala (extensão). Para ir além de uma descrição simplista dos padrões observados, na ecologia da paisagem uma variedade de modelos estatísticos são usados.Não vamos rodar modelos (ainda), mas é importante entender algumas das opções disponíveis ao interpretar os gráficos.
+
+Por exemplo, modelos de regressão são amplamente usados em diversas aplicações
+para descrever a relação entre uma variável resposta Y e uma variável
+explicativa x. Os modelos lineares são uma generalização dos testes de hipótese clássicos mais simples ([Modelos linear](http://sillasgonzaga.com/material/cdr/modelos.html#modelo-linear) e [ Modelos lineares](https://analises-ecologicas.com/cap7.html)). Uma regressão linear, só pode ser aplicada para dados em que tanto a variável preditora quanto a resposta são contínuas, enquanto uma análise de variância é utilizada quando a variável preditora/explicativa é categórica. Os modelos lineares generalizados não têm essa limitação, podemos usar variáveis contínuas ou categóricas indistintamente ([Modelos Lineares Generalizados](https://analises-ecologicas.com/cap8.html)).
+
+Mas, no caso de padroes ecologicas, sera que um modelo linear é o melhor modelo para representar a relação que explica “y” em função de “x”?  Um número crescente de pesquisadores compartilham o sentimento de que as relações entre variáveis biológicas/ecologicas são melhores descritas por funções não lineares. Processos ecologicas (como por exemplo crescimento, mortalidade, dispersão, e competição) raramente são relacionadas linearmente às variáveis explicativas. 
+
+A principal vantagem do modelo não linear sobre o linear é que 1) sua
+escolha está associada à conhecimento prévio sobre a relação a ser modelada e 2) geralmente apresenta interpretação prática para os parâmetros. Em modelos não-linear dados observados de uma variável resposta são descritos por uma função de uma ou mais variáveis explicativas que é não linear seus parâmetros. Assim como nos modelos lineares o objetivo é identificar e estabelecer a relação entre variáveis explicativas e resposta. Entretanto, enquanto os modelos lineares definem, em geral, relações empíricas/teoricas, os modelos não-lineares são, em grande parte das vezes, motivados pelo conhecimento do tipo de relação entre as variáveis. Desta forma, as aplicações surgem nas diversas áreas onde relações físicas, biológicas, cinéticas, químicas, fisiológicas, dentre outras, são estabelecidas por funções não lineares que devem ter coeficientes (parâmetros) identificados (estimados) a partir de dados observados, dados experimentais e/ou dados simulados.
+
+Como as mudanças na estrutura da paisagem caracterizam-se por serem não-lineares, para desenvolver análises estatísticas robustos pode (i) aplicar uma transformação (por exemplo, "log") ou (ii) adotar modelos não-lineares. 
+```{r create-fig-comp, echo=FALSE, message=FALSE, warning=FALSE}
+amostras_metrica %>% 
+  filter(class==1) %>%
+  ggplot(aes(x=(2*raio)/1000, y=value)) + 
+  geom_point() + 
+  geom_line() +
+  stat_smooth(method = "lm", color = "green", 
+              linetype="dashed") + 
+  coord_cartesian(ylim = c(0,100)) +
+  labs(title = "(A) Modelo linear", 
+       subtitle = "dados sem transformação",
+       x = "Extensão (quilômetros)", 
+       y = "Área central de floresta\n(porcentagem da paisagem)") + 
+  theme_bw() -> fig_lm
+
+amostras_metrica %>% 
+  filter(class==1) %>%
+  ggplot(aes(x=log((2*raio)/1000), y=value)) + 
+  geom_point() + 
+  geom_line() +
+  stat_smooth(method = "lm", color = "green", 
+              linetype="dashed") + 
+  coord_cartesian(ylim = c(0,100)) +
+  labs(title = "(B) Modelo linear", 
+       subtitle = "dados com transformação",
+       x = "Extensão (quilômetros - logaritmo natural)", 
+       y = "Área central de floresta\n(porcentagem da paisagem)") + 
+  theme_bw() -> fig_lmtrans
+
+amostras_metrica %>% 
+  filter(class==1) %>%
+  ggplot(aes(x=(2*raio)/1000, y=value)) + 
+  geom_point() + 
+  geom_line() +
+  stat_smooth(method = "gam", formula = y ~ s(x, k = 5), 
+              linetype="dashed") + 
+  coord_cartesian(ylim = c(0,100)) +
+  labs(title = "(C) Modelo não-linear", 
+       subtitle = "dados sem transformação",
+       x = "Extensão (quilômetros)", 
+       y = "Área central de floresta\n(porcentagem da paisagem)") + 
+  theme_bw() -> fig_gam
+
+pdf("figures/fig_comp_linear.pdf", width=11, height=3)
+grid.arrange(fig_lm, fig_lmtrans, fig_gam, nrow=1)
+invisible(dev.off())
+
+png("figures/fig_comp_linear.png", width=11, height=3, 
+    units="in", res = 600)
+grid.arrange(fig_lm, fig_lmtrans, fig_gam, nrow=1)
+invisible(dev.off())
+
+```
+
+
+```{r insert-fig-comp, echo=FALSE, message=FALSE, warning=FALSE, out.width="98%", out.height="98%", fig.cap="Comparação de padrões lineares e não-lineares."}
+knitr::include_graphics("figures/fig_comp_linear.png")
+```
+
+
+### Pergunta 5
+`r kableExtra::text_spec("Comparar os resultados apresentados nas figuras com modelos lineares e não-lineares. Como podemos estabelecer qual seria o melhor modelo? Qual modelo seria mais adequado para identificar limiares no padrão de área central de floresta?", color = "blue", bold = TRUE)`
+
+-------
+
+\newpage
+
+## Ponto único, distâncias variados, métricas variadas
+
+No exemplo anterior comparamos uma métrica da paisagem em torno de um único ponto de amostragem. Mas sabemos que uma combinação de várias métricas de paisagem diferentes é necessária para entender os padrões na paisagem.
+Aqui mostraremos como incluir cálculos de diferentes métricas de paisagem ao mesmo tempo.
+
+
+
+```{r insert-fig-buffmetrics, fig.cap="Ilustração da determinação de métricas da paisagem diferentes ao redor de um ponto. Exemplo com a estrutura da paisagem representado com trés caracteristicas (A) Área central, (B) Borda e (C) Vizinho mais próximo. O habitat de interesse (classe) é isolado. Um buffer (linha tracejada) é colocado ao redor de um ponto (amarela) e as métricas calculadas. E em seguida o processo é repetido em diferentes extensões.", echo=FALSE, warning=FALSE, message=FALSE}
+ragg <- aggregate(buffer.forest1.16000m, fact=5, fun="median")
+ragg_forest <- ragg
+# Com valor de NA
+values(ragg_forest) <- NA
+# Atualizar categorias florestais agrupados com valor de 1
+ragg_forest[ragg==1] <- 1 
+
+#ragg10 <- aggregate(buffer.forest1.16000m, fact=10, fun="median")
+
+my_metric_r_all = spatialize_lsm(ragg_forest, level = "patch", metric = "enn")
+r_enn <- my_metric_r_all$layer_1$lsm_p_enn
+
+fig_enn <- tm_shape(r_enn) +
+  tm_raster(title = "distância", n=9, palette = "-viridis") + 
+tm_shape(rsm_31976[1, ]) + 
+    tm_symbols(shape =21, col = "yellow", 
+            border.col = "black", border.lwd = 0.2, size=0.5) + 
+tm_shape(rsm_31976_b1000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_shape(rsm_31976_b2000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_shape(rsm_31976_b4000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_shape(rsm_31976_b8000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_shape(rsm_31976_b16000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_scale_bar(breaks = c(0, 2, 4), text.size = 1, 
+             position=c("left", "bottom")) + 
+tm_layout(main.title = "(C) Vizinho mais próximo", main.title.size = 1)
+
+classpoly <- as.polygons(ragg)
+# https://gis.stackexchange.com/questions/392505/can-i-use-r-to-do-a-buffer-inside-polygons-shrink-polygons-negative-buffer/392525
+shrinkIfPossible <- function(sf, size) {
+  # compute inward buffer
+  sg <- st_buffer(st_geometry(sf), -size)
+  
+  # update geometry only if polygon is not degenerate
+  st_geometry(sf)[!st_is_empty(sg)] = sg[!st_is_empty(sg)]
+   
+  # return updated dataset
+  return(sf)
+}
+classpoly_sf <- st_as_sf(classpoly)
+SelForest <- which(classpoly_sf$classification_2020==1)
+shp_buffered <- shrinkIfPossible(classpoly_sf[SelForest, ], 300)
+
+fig_core <- tm_shape(buffer.forest1.16000m) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", 
+                        "1" ="#129912"), legend.show = FALSE) + 
+  tm_shape(shp_buffered) + 
+   tm_fill("lightgreen") + 
+   tm_shape(rsm_31976[1, ]) + 
+    tm_symbols(shape =21, col = "yellow", 
+            border.col = "black", border.lwd = 0.2, size=0.5) + 
+  tm_shape(rsm_31976_b1000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b2000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b4000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b8000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b16000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_add_legend(type = "fill", 
+    labels = c("não-floresta", "floresta", "área central"),
+    col = c("#E974ED", "#129912", "lightgreen")) + 
+tm_scale_bar(breaks = c(0, 2, 4), text.size = 1, 
+             position=c("left", "bottom")) +
+  tm_layout(legend.position = c("right","top"),
+          legend.bg.color = "white") + 
+tm_layout(main.title = "(A) Área central", main.title.size = 1)
+
+fig_edge <- tm_shape(buffer.forest1.16000m) +
+  tm_raster(style = "cat", 
+            palette = c("0" = "#E974ED", 
+                        "1" ="lightgray"), legend.show = FALSE) + 
+  tm_shape(shp_buffered) + 
+   tm_fill("#129912") + 
+   tm_shape(rsm_31976[1, ]) + 
+    tm_symbols(shape =21, col = "yellow", 
+            border.col = "black", border.lwd = 0.2, size=0.5) + 
+  tm_shape(rsm_31976_b1000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b2000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b4000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b8000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+  tm_shape(rsm_31976_b16000) +
+    tm_borders(col = line_col, lwd = 4, lty = "dashed") + 
+tm_add_legend(type = "fill", 
+    labels = c("não-floresta", "floresta", "borda"),
+    col = c("#E974ED", "#129912", "lightgray")) + 
+tm_scale_bar(breaks = c(0, 2, 4), text.size = 1, 
+             position=c("left", "bottom")) +
+  tm_layout(legend.position = c("right","top"),
+          legend.bg.color = "white") + 
+tm_layout(main.title = "(B) Borda", main.title.size = 1)
+
+tmap_arrange(fig_core, fig_edge, fig_enn, nrow=1)
+
+```
+
+
+
+
+
+
+-------
+
+\newpage
+
+ > Não deve calcular todas as métricas disponíveis, mas sim, escolher aquelas que podem ser realmente adequadas para sua pergunta de pesquisa.
+ 
+Calculando todas as métricas se chama um "tiro no escuro", algo cujo resultado se desconhece ou é imprevisível. Isso não é recomendado. Para fazer uma escolha melhor (mais robusta), seguindo princípios básicos da ciência, precisamos ler os estudos anteriores (artigos) para obter as métricas mais relevantes para nosso objetivo, pergunta e/ou a hipótese a ser testada.
+Aqui, como exemplo illustrativa vamos calcular alguns das métricas mais comums. Mas, isso não representa necessariamente as métricas mais adequados ou recommendadas.
+
+ * Métricas de área e borda (area and edge metrics). Quantificam a composição da paisagem:  
+ 
+    *  `r kableExtra::text_spec("pland", background = "#dedede")` =  percentage of landscape. Percentagem da paisagem. Porcentagem de cobertura da classe na paisagem.
+    * `r kableExtra::text_spec("ed", background = "#dedede")` = edge density . Densidade de borda que é igual à soma dos comprimentos (m) de todos os segmentos de borda que envolvem o fragmento, dividida pela área total da paisagem (m²), sendo posteriormente convertido em hectares.
+    * `r kableExtra::text_spec("cpland", background = "#dedede")` = core area percentage of landscape. Percentual de área central ("core") na paisagem.
+Percentual de áreas centrais (excluídas as bordas de 30 m) em relação à área total da paisagem. O termo "Core area" foi traduzido como área central ou área núcleo. Aqui vamos adotar área central.
+
+ * Métricas de agregação. Quantificam a configuração da paisagem:
+    * `r kableExtra::text_spec("enn", background = "#dedede")` = euclidian nearest neighbour distance. Distância euclidiana do vizinho mais próximo. 
+    * `r kableExtra::text_spec("enn_cv", background = "#dedede")` = Coefficient of variation of euclidean nearest-neighbor distance. Coeficiente de variação da distância euclidiana do vizinho mais próximo. A métrica resume cada classe como o Coeficiente de variação das distâncias euclidianas do vizinho mais próximo entre as manchas pertencentes à classe. O valor de enn_cv = 0 se a distância euclidiana do vizinho mais próximo for idêntica para todas as manchas. Aumenta, sem limite, à medida que a variação do ENN aumenta.
+    * `r kableExtra::text_spec("enn_sd", background = "#dedede")` = Standard deviation of euclidean nearest-neighbor distance. Desvio padrão da distância euclidiana do vizinho mais próximo. 
+    * `r kableExtra::text_spec("pd", background = "#dedede")` = Patch density. Densidade das manchas.
+    * `r kableExtra::text_spec("cohesion", background = "#dedede")` = Cohesion index. Índice de coesão das manchas.
+    
+Para incluir cálculos de diferentes métricas de paisagem ao mesmo tempo, precisamos  acrescentar somente uma nova linha de codigo. Uma nova linha, que cria um objeto com os nomes das funções para as métricas que queremos calcular..... Também precisamos usar a opção "what" na função para aceitar os nomes das funções. 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Objeto com os nomes das funções para calcular as métricas desejadas.
+minhas_metricas <- c("lsm_c_pland", "lsm_c_ed", "lsm_c_cpland", 
+                     "lsm_c_enn_mn", "lsm_c_enn_sd", "lsm_c_enn_cv", 
+                     "lsm_c_pd","lsm_c_cohesion")
+
+# 8 Métricas calculadas para cada extensão
+# raio 250 metros
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 250, shape = "circle", 
+           what = minhas_metricas) %>% 
+  mutate(raio = 250) -> metricas_amostra_250 
+# raio 500 metros
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 500, shape = "circle", 
+           what = minhas_metricas)  %>% 
+   mutate(raio = 500) -> metricas_amostra_500
+# raio 1 km (1000 metros)
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 1000, shape = "circle", 
+           what = minhas_metricas)  %>% 
+   mutate(raio = 1000) -> metricas_amostra_1000
+# raio 2 km (2000 metros)
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 2000, shape = "circle", 
+           what = minhas_metricas) %>% 
+  mutate(raio = 2000) -> metricas_amostra_2000
+# raio 4 km (4000 metros)
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 4000, shape = "circle", 
+           what = minhas_metricas)  %>% 
+  mutate(raio = 4000)  -> metricas_amostra_4000
+# raio 8 km (8000 metros)
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 8000, shape = "circle", 
+           what = minhas_metricas)  %>% 
+  mutate(raio = 8000) -> metricas_amostra_8000
+# raio 16 km (16000 metros)
+sample_lsm(floresta_2020, y = rsm_31976[1, ], 
+           size = 16000, shape = "circle", 
+           what = minhas_metricas)  %>% 
+  mutate(raio = 16000) -> metricas_amostra_16000
+```
+
+E agora, o código a seguir juntará os resultados das diferentes extensões.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+bind_rows(metricas_amostra_250, 
+          metricas_amostra_500, 
+          metricas_amostra_1000, 
+          metricas_amostra_2000, 
+          metricas_amostra_4000, 
+          metricas_amostra_8000, 
+          metricas_amostra_16000) -> amostras_metricas
+
+```
+
+Depois que executar ("run"), podemos olhar os dados com o codigo a seguir. 
+```{r, eval=FALSE}
+amostras_metricas
+```
+
+Os dados deve ter os valores (coluna value) das métricas (coluna metric) 
+de cada classe (coluna class) para cada distância (coluna raio):
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+head(amostras_metricas, n=10) %>% 
+  mutate(value = round(value,2), 
+         percentage_inside = round(percentage_inside,1)) %>%
+  kbl() %>%
+  kable_styling(full_width = F,  latex_options = "hold_position")
+```
+
+Agorta, vamos fazer um grafico com os dados amostras_metricas, usando o pacote ggplot2. Para ajudar na visualização incluímos quais métricas são para composição e configuração e nomes que são mais fáceis de entender.
+
+```{r insert-fig-multiplemetrics, message=FALSE, warning=FALSE}
+metricas_composicao <- c("pland", "ed", "cpland")
+# arrumar dados
+amostras_metricas %>% 
+  filter(class==1) %>%
+  mutate(ext_km = (2*raio)/1000, 
+         met_cat = if_else(metric %in% metricas_composicao, 
+                           "composição", "configuração")) %>%
+# fazer grafico
+  ggplot(aes(x=ext_km, y=value)) + 
+  geom_point() + 
+  geom_line() +
+  facet_wrap(met_cat~metric, scales = "free_y") +
+  labs(title = "Comparação multiescala de várias métricas",
+    x = "extensão (quilômetros)", 
+    y = "metric value")
+```
+
+
+### Pergunta 6
+
+`r kableExtra::text_spec("Com base nos resultados apresentados (figura e tabela) caracterisar as mudançãs na paisagem em função de extensões diferentes. Olhando os graficos prever como seria o padrão para extensões maiores (lembrando que valores são doubrados - por exemplo raio de 250 metros gerar uma extensão de 500 metros). Seria relevante repetir incluindo calculos para extensões maiores (por exemplo 64 km e 128 km)? Justifique sua caracterização e previsões de forma clara e concisa, apoie sua escolha com exemplos da literatura científica.", color = "blue", bold = TRUE)`
+
+
+### Pergunta 7
+
+`r kableExtra::text_spec("Usando como base o conteudo das aulas, leitura disponivel no Google Classroom (Base teórica 4 Dados, métricas, analises), e/ou exemplos apresentados aqui no tutorial, selecione pelo menos seis métricas de nível classe para caracterizar a paisagem de estudo e objectivos da sua projeto. Justifique sua seleção de forma clara e concisa, apoie sua escolha com exemplos da literatura científica.", color = "blue", bold = TRUE)`
+
+----------------------------------------------------------
+
+```{r, echo=FALSE, eval=FALSE}
+#https://bnu-landscape-ecology.netlify.app/post/2020-10-23-lsm/
+#example so no need to repeat by different sizes
+# 5 minutos para rodar 5 pontos * 8 metricas * 7 distancias * 2 classes
+buffer_sizes <- c(250,500,1000, 2000, 4000, 8000, 16000) 
+r <- raster(floresta_2020)
+buffer_results <- buffer_sizes %>% #buffer data
+  set_names() %>% #use the given names
+  #map_dfr() return a data frame created by row-binding
+  map_dfr(~sample_lsm(list(r), 
+                      what=minhas_metricas, #metrics 
+                      y = rsm_31976[1:5, ], #locations
+                      plot_id = data.frame(rsm_31976)[1:5, 'subz_id'],
+                      size = .),  #from each element of the data
+          .id = "raio") #the variable name for each element of buffer_size
+
+```
+

@@ -115,6 +115,11 @@ st_write(ad_dif, dsn = outfile,
 st_write(ad_buff, dsn = outfile, 
          layer = "buffers", delete_layer = TRUE, append = TRUE)
 
+# Add LINE FOR DIRECTLY AFFECTED ZONE
+ad_line <- read_sf("data/vector/impactodireta/impdir.shp") 
+outfile <- "C:/Users/user/Documents/Articles/gis_layers/gisdata/inst/vector/rivers.gpkg"
+st_write(ad_line, dsn = outfile, 
+         layer = "direct_affect_line", delete_layer = TRUE, append = TRUE)
 
 # Used to split buffer polygons
 br156long <- read_sf("vector/br156_uaca_long.shp") %>% 
