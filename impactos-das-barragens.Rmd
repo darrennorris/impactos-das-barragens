@@ -357,7 +357,7 @@ Visualizar com o codigo:
 mapview::mapview(ada_buff_31976, zcol = "buff_dist")
 ```
 
-Se tudo da certo, epois de executar ("run") o código acima, você deverá ver a figura a seguir. Mostrando os cinco buffers, em faixas de distanci diferentes.
+Se tudo da certo, depois de executar ("run") o código acima, você deverá ver a figura a seguir. Mostrando os cinco buffers, em faixas de distancia diferentes.
 Onde "0" = Área Diretamente Afetada sem buffer, "1000" = 1 a 1000 metros além do ADA,
 "2000" = 1000 a 2000 metros além do ADA, "4000" = 3000 a 4000 metros além do ADA e 
 "8000" = 7000 e 8000 metros além do ADA.
