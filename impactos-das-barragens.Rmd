@@ -325,17 +325,51 @@ Métricas de área central ("core area") são consideradas medidas da qualidade 
 
 Vamos represntar a região de interesse com um sequencia de buffers ao redor da 
 Área Diretamente Afetada.
-Agora temos a paisagem, precisamos tambem a região de interesse (area de estudo). Por isso, precisamos carregar os dados de rios que usamos no tutorial [Escala](https://rpubs.com/darren75/escala) - arquivo "rivers.GPKG". 
+ Por isso, precisamos carregar os dados de buffers - arquivo "barragem_impactos.GPKG". 
+ ```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
+rivers <- "data/vector/rivers.gpkg"
+sf::st_layers(rivers)
+# linha central de rios
+rio_31976 <- sf::st_read(rivers, layer = "centerline") %>% 
+  st_transform(31976) 
+barragem_31976 <- sf::st_read(rivers, layer = "cachoeira_caldeirao") %>% 
+  st_transform(31976) 
+ada_31976 <- sf::st_read(rivers, layer = "direct_affect") %>% 
+  st_transform(31976) 
+ada_31976_linha <- sf::st_read(rivers, layer = "direct_affect_line") %>% 
+  st_transform(31976) 
+```
+```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
 
-Baixar o arquivo Link: [https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG](https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG){target="_blank"} .
-Lembrando-se de salvar o arquivo ("rivers.GPKG")  em um local conhecido no seu computador. 
+buffers <- "data/vector/barragem_impactos.GPKG"
+sf::st_layers(buffers)
+ada_buff_31976 <- sf::st_read(buffers, layer = "faixas") 
+
+```
 
 
+Baixar o arquivo Link: [https://github.com/darrennorris/impactos-das-barragens/blob/main/data/vector/barragem_impactos.GPKG](https://github.com/darrennorris/impactos-das-barragens/blob/main/data/vector/barragem_impactos.GPKG){target="_blank"} .
+Lembrando-se de salvar o arquivo ("barragem_impactos.GPKG")  em um local conhecido no seu computador. 
+
+Precisamos entender exatamente o que os "buffers" representem, assim para interpretar os resutlados coretamente.
+Visualizar com o codigo:
+```{r, eval=FALSE}
+mapview::mapview(ada_buff_31976, zcol = "buff_dist")
+```
+
+Se tudo da certo, epois de executar ("run") o código acima, você deverá ver a figura a seguir. Mostrando os cinco buffers, em faixas de distanci diferentes.
+Onde "0" = Área Diretamente Afetada sem buffer, "1000" = 1 a 1000 metros além do ADA,
+"2000" = 1000 a 2000 metros além do ADA, "4000" = 3000 a 4000 metros além do ADA e 
+"8000" = 7000 e 8000 metros além do ADA.
+
+```{r}
+mapview::mapview(ada_buff_31976, zcol = "buff_dist")
+```
 
 Para os calculos aqui usamos a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` .
 
 Para a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` funcionar, precisamos informar 
-(i) a paisagem (arquivo de raster), (ii) regiao de interesse (poligono) e (iii) a métrica  desejada. Cada opção tem especificações particulares assim para que a função pode receber dados em formatos diferentes e produzir resultados conforme as necessidades de diversos casos. 
+(i) a paisagem (arquivo de raster), (ii) regiao de interesse (poligono) e (iii) a métrica  desejada. Cada opção tem especificações particulares assim para que a função pode receber dados em formatos diferentes e produzir resultados conforme as necessidades de diversos estudos. 
 
 
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}

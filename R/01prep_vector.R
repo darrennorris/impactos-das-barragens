@@ -12,11 +12,11 @@ ad_line <- read_sf("data/vector/impactodireta/impdir.shp") %>%
 # for buffer
 ad <- read_sf("data/vector/impactodireta/impdir_poly.shp") %>% 
   st_transform(31976) %>% 
-  mutate(buff_dist = NA, 
+  mutate(buff_dist = 0, 
          tipo = "original", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>% 
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
 area_ad_m2 <- st_area(ad)
 ad_buf_1km <- st_buffer(ad, dist=1000) %>% 
   mutate(buff_dist = 1000, 
@@ -106,8 +106,11 @@ bind_rows(ad_buf_1km, dif_buf_1km,
   facet_grid(buff_dist~tipo) + 
   scale_fill_viridis_c()
 
-ad_dif <- bind_rows(dif_buf_1km, dif_buf_2km, dif_buf_4km, dif_buf_8km)
-ad_buff <- bind_rows(ad_buf_1km, ad_buf_2km, ad_buf_4km, ad_buf_8km)
+ad_dif <- bind_rows(ad, dif_buf_1km, dif_buf_2km, dif_buf_4km, dif_buf_8km) %>% 
+  mutate(minhaid = paste(tipo, buff_dist, sep="_"))
+ad_buff <- bind_rows(ad, ad_buf_1km, ad_buf_2km, ad_buf_4km, ad_buf_8km) %>% 
+  mutate(minhaid = paste(tipo, buff_dist, sep="_"))
+
 # Export as gpkg
 outfile <- "C:/Users/user/Documents/CA/impactos-das-barragens/data/vector/barragem_impactos.GPKG"
 st_write(ad_dif, dsn = outfile, 
@@ -120,6 +123,8 @@ ad_line <- read_sf("data/vector/impactodireta/impdir.shp")
 outfile <- "C:/Users/user/Documents/Articles/gis_layers/gisdata/inst/vector/rivers.gpkg"
 st_write(ad_line, dsn = outfile, 
          layer = "direct_affect_line", delete_layer = TRUE, append = TRUE)
+
+# below code examples not used.....
 
 # Used to split buffer polygons
 br156long <- read_sf("vector/br156_uaca_long.shp") %>% 
