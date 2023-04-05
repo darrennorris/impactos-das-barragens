@@ -38,15 +38,15 @@ knit_hooks$set(output = function(x, options) {
 \newpage{}
 
 # Apresentação
-As métricas da paisagem nos ajudam a entender as mudanças na paisagem de diferentes perspectivas (visual, ecológica, cultural). Asssim sendo, análises com métricas de paisagem é um atividade fundamental na ecologia da paisagem. Nesta aula (https://rpubs.com/darren75/metricas) aprenderemos sobre como analisar a cobertura da terra com métricas de paisagem em R. As tecnicas será ilustrada através cálculos usando a cobertura florestal ao redor do Rio Araguari. Ao longo do caminho, revisaremos modelos lineares e não lineares, aprenderemos sobre manipulação de dados em R e aprenderemos como criar gráficos com o pacote ggplot2.
+As métricas da paisagem nos ajudam a entender as mudanças na paisagem de diferentes perspectivas (visual, ecológica, cultural). Asssim sendo, análises com métricas de paisagem é um atividade fundamental na ecologia da paisagem. Nesta aula ( ) aprenderemos sobre como analisar a cobertura da terra com métricas de paisagem em R. As tecnicas será ilustrada através cálculos usando a cobertura florestal ao redor do Rio Araguari. Ao longo do caminho, aprenderemos sobre manipulação de dados em R e aprenderemos como criar gráficos com o pacote ggplot2.
 
 Durante a aula você aprenderá a:  
 
- * Importar e plotar dados raster em R e mapear locais de amostragem com os pacotes [terra](https://rspatial.org/pkg/index.html), [sf](https://cran.r-project.org/web/packages/sf/vignettes/sf1.html) e [tmap](https://r-tmap.github.io/tmap/).  
+ * Importar e plotar dados raster em R e mapear com os pacotes [terra](https://rspatial.org/pkg/index.html), [sf](https://cran.r-project.org/web/packages/sf/vignettes/sf1.html) e [tmap](https://r-tmap.github.io/tmap/).  
  
  * Calcular métricas de paisagem com o pacote [landscapemetrics](https://r-spatialecology.github.io/landscapemetrics/).  
  
- * Calcular métricas de paisagem em locais de amostragem e dentro de um buffer ao redor deles (comparação multiescala).  
+ * Calcular métricas de paisagem em regiões de interesse e dentro de um buffer ao redor deles.  
  
  * Construir gráficos com o pacote [ggplot2](https://ggplot2.tidyverse.org/).
 
@@ -192,6 +192,7 @@ floresta_2020 <- mapbiomas_2020
 values(floresta_2020) <- 0
 # Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
 floresta_2020[mapbiomas_2020==3 | mapbiomas_2020==4] <- 1 
+# 
 ```
 
 Plotar para verificar, incluindo nomes e os cores para classes de floresta (valor = 1) e não-floresta (valor = 0).
@@ -222,7 +223,7 @@ tm_shape(floresta_2020_modal) +
 tm_layout(legend.bg.color = "white")
 ```
 
-## Exibir dados raster e sobreposição com locais de amostragem
+## Exibir dados raster e sobreposição com uma região de interesse
 Agora temos a paisagem, precisamos tambem a região de interesse (area de estudo). Por isso, precisamos carregar os dados de rios que usamos no tutorial [Escala](https://rpubs.com/darren75/escala) - arquivo "rivers.GPKG". 
 
 Baixar o arquivo Link: [https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG](https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG){target="_blank"} .
@@ -269,8 +270,7 @@ ada_31976_linha <- sf::st_read(rivers, layer = "direct_affect_line") %>%
 
 Visualizer para verificar. 
 ```{r, eval=FALSE}
-# Passo necessario para agilizar o processamento
-floresta_2020_modal<-aggregate(floresta_2020, fact=10, fun="modal")
+
 # Plot
 tm_shape(floresta_2020_modal) +
   tm_raster(style = "cat", 
@@ -289,8 +289,7 @@ tm_layout(legend.bg.color="white")
 Depois de executar ("run") o código acima, você deverá ver a figura a seguir.
 
 ```{r, echo=FALSE, fig.width=5, fig.height=5, fig.cap="Cobertura da terra ao redor do Rio Araguari em 2020. Mostrando a barragem cachoeira Caldeirão (ponto amarela), Área Diretamente Afetada (linha amarela) e o rio (linha azul)."}
-# Passo necessario para agilizar o processamento
-floresta_2020_modal<-aggregate(floresta_2020, fact=10, fun="modal")
+
 # Plot
 tm_shape(floresta_2020_modal) +
   tm_raster(style = "cat", 
@@ -326,30 +325,27 @@ Métricas de área central ("core area") são consideradas medidas da qualidade 
 Vamos represntar a região de interesse com um sequencia de buffers ao redor da 
 Área Diretamente Afetada.
  Por isso, precisamos carregar os dados de buffers - arquivo "barragem_impactos.GPKG". 
- ```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
-rivers <- "data/vector/rivers.gpkg"
-sf::st_layers(rivers)
-# linha central de rios
-rio_31976 <- sf::st_read(rivers, layer = "centerline") %>% 
-  st_transform(31976) 
-barragem_31976 <- sf::st_read(rivers, layer = "cachoeira_caldeirao") %>% 
-  st_transform(31976) 
-ada_31976 <- sf::st_read(rivers, layer = "direct_affect") %>% 
-  st_transform(31976) 
-ada_31976_linha <- sf::st_read(rivers, layer = "direct_affect_line") %>% 
-  st_transform(31976) 
-```
+
+Baixar o arquivo Link: [https://github.com/darrennorris/impactos-das-barragens/blob/main/data/vector/barragem_impactos.GPKG](https://github.com/darrennorris/impactos-das-barragens/blob/main/data/vector/barragem_impactos.GPKG){target="_blank"} .
+Lembrando-se de salvar o arquivo ("barragem_impactos.GPKG")  em um local conhecido no seu computador.
+
 ```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, results='hide'}
 
 buffers <- "data/vector/barragem_impactos.GPKG"
-sf::st_layers(buffers)
+#sf::st_layers(buffers)
 ada_buff_31976 <- sf::st_read(buffers, layer = "faixas") 
 
 ```
 
+Agora, com o proximo bloco de codigo, podemos selecionar o arquivo "rivers.GPKG", e carregar as camadas necessarios.
 
-Baixar o arquivo Link: [https://github.com/darrennorris/impactos-das-barragens/blob/main/data/vector/barragem_impactos.GPKG](https://github.com/darrennorris/impactos-das-barragens/blob/main/data/vector/barragem_impactos.GPKG){target="_blank"} .
-Lembrando-se de salvar o arquivo ("barragem_impactos.GPKG")  em um local conhecido no seu computador. 
+```{r, eval=FALSE, message=FALSE, results = FALSE}
+#  Selecionar o arquivo "barragem_impactos.GPKG"
+buffers <- file.choose()
+# Carregar buffers ao redor da Área Diretamente Afetada (ADA)
+ada_buff_31976 <- sf::st_read(buffers, layer = "faixas") 
+```
+
 
 Precisamos entender exatamente o que os "buffers" representem, assim para interpretar os resutlados coretamente.
 Visualizar com o codigo:
@@ -364,6 +360,7 @@ Onde "0" = Área Diretamente Afetada sem buffer, "1000" = 1 a 1000 metros além 
 
 ```{r}
 mapview::mapview(ada_buff_31976, zcol = "buff_dist")
+
 ```
 
 Para os calculos aqui usamos a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` .
@@ -371,31 +368,28 @@ Para os calculos aqui usamos a função `r kableExtra::text_spec("sample_lsm()",
 Para a função `r kableExtra::text_spec("sample_lsm()", background = "#dedede")` funcionar, precisamos informar 
 (i) a paisagem (arquivo de raster), (ii) regiao de interesse (poligono) e (iii) a métrica  desejada. Cada opção tem especificações particulares assim para que a função pode receber dados em formatos diferentes e produzir resultados conforme as necessidades de diversos estudos. 
 
-
+Aqui usamos os dados de 2020 e calcular uma metrica para cada buffer no obejeto (ada_buff_31976).
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
-minha_amostra_1000 <- sample_lsm(landscape = floresta_2020, 
-                                 y = rsm_31976[1, ], 
-                            size = 1000, shape = "circle", 
+metricas_1 <- sample_lsm(landscape = floresta_2020, 
+                                 y = ada_buff_31976, 
+                                 plot_id = data.frame(ada_buff_31976)[ , 'minhaid'],
                             metric = "cpland", 
                             edge_depth = 1) 
 ```
 
-Depois que executar ("run"), podemos olhar os dados com o codigo a seguir. 
-Os dados deve ter os valores (coluna value) da métrica (coluna metric) de cada classe (coluna class):
+Isso pode demorar us minutos. Depois que executar ("run"), podemos olhar os dados com o codigo a seguir. 
+Os dados deve ter os valores (coluna "value") da métrica (coluna "metric") de cada classe (coluna "class"):
 ```{r, eval=FALSE}
-minha_amostra_1000
+metricas_1
 ```
 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-minha_amostra_1000 %>% 
+metricas_1 %>% 
   kbl() %>%
   kable_styling(full_width = F,  latex_options = "hold_position")
 ```
 
-### Pergunta 2
-
-`r kableExtra::text_spec("O modelo mancha-corredor-matriz é frequentemente adotado na ecologia da paisagem. Com base nas aulas teóricas e usando os valores no objeto minha_amostra_1000 apresentados na tabela acima, identificar qual classe representar a matriz na paisagem. Há alguma informação faltando que limita a sua capacidade de identificar qual classe representar a matriz? Se sim, o que precisa ser adicionado? Justifique as suas respostas de forma clara e concisa.", color = "blue", bold = TRUE)`
 
 ----------------------------------------------------------------
 
