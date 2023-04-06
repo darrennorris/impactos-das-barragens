@@ -446,8 +446,9 @@ mapbiomas_2020 <- rast(rin_20) %>%
 
 
 # Reclassificação - 
-# Criar uma nova camada de floresta (novo objeto de raster copiando mapbiomas_ , 
-# assim para ter os mesmos coordenados, resolução e extensão)
+# Criar uma nova camada "floresta" (novo objeto de raster copiando mapbiomas_ , 
+# assim para ter os mesmos coordenados, resolução e extensão). Cada ano pode incluir
+# até 4 classes: 1 = floresta, 33 = agua, 11 =campo alagado, 0 = outro
 floresta_2012 <- mapbiomas_2012
 # Todos os pixels com valor de 0
 values(floresta_2012) <- 0
