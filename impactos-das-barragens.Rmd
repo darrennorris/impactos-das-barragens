@@ -541,7 +541,7 @@ floresta_2020[mapbiomas_2020==11] <- 11
 ```
 
 Agora podemos reunir em uma raster unica para os proximos passos não preciso se reptir para cada ano. 
-```{r}
+```{r, eval=FALSE}
 floresta_12a20 <- c(floresta_2012, floresta_2013, floresta_2014, 
                      floresta_2015, floresta_2016, floresta_2017, 
                      floresta_2018, floresta_2019, floresta_2020)
