@@ -18,12 +18,13 @@ ad <- read_sf("data/vector/impactodireta/impdir_poly.shp") %>%
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>% 
   dplyr::select(buff_dist, tipo, area_m2, area_km2)
 area_ad_m2 <- st_area(ad)
-ad_buf_1km <- st_buffer(ad, dist=1000) %>% 
+ad_buf_1km <- st_buffer(ad, dist=1200) %>% 
   mutate(buff_dist = 1000, 
          tipo = "buffer", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
+plot(st_union(ad_buf_1km))
 area_adb1km_m2 <- st_area(ad_buf_1km)
 
 dif_buf_1km <- st_difference(ad_buf_1km, ad) %>% 
@@ -31,7 +32,7 @@ dif_buf_1km <- st_difference(ad_buf_1km, ad) %>%
          tipo = "diferença", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo,area_m2, area_km2)
+  dplyr::select(buff_dist, tipo,area_m2, area_km2)
 area_dif1km_m2 <- st_area(dif_buf_1km)
 
 # 2km
@@ -40,14 +41,14 @@ ad_buf_2km <- st_buffer(ad, dist=2000) %>%
          tipo = "buffer", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
 
 dif_buf_2km <- st_difference(ad_buf_2km, ad_buf_1km) %>% 
   mutate(buff_dist = 2000, 
          tipo = "diferença", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo,area_m2, area_km2)
+  dplyr::select(buff_dist, tipo,area_m2, area_km2)
 
 # 4km
 ad_buf_4km <- st_buffer(ad, dist=4000) %>% 
@@ -55,20 +56,20 @@ ad_buf_4km <- st_buffer(ad, dist=4000) %>%
          tipo = "buffer", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
 
 ad_buf_3km <- st_buffer(ad, dist=3000) %>% 
   mutate(buff_dist = 3000, 
          tipo = "buffer", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
 dif_buf_4km <- st_difference(ad_buf_4km, ad_buf_3km) %>% 
   mutate(buff_dist = 4000, 
          tipo = "diferença", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo,area_m2, area_km2)
+  dplyr::select(buff_dist, tipo,area_m2, area_km2)
 
 # 8km
 ad_buf_8km <- st_buffer(ad, dist=8000) %>% 
@@ -76,19 +77,19 @@ ad_buf_8km <- st_buffer(ad, dist=8000) %>%
          tipo = "buffer", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
 ad_buf_7km <- st_buffer(ad, dist=7000) %>% 
   mutate(buff_dist = 7000, 
          tipo = "buffer", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo, area_m2, area_km2)
+  dplyr::select(buff_dist, tipo, area_m2, area_km2)
 dif_buf_8km <- st_difference(ad_buf_8km, ad_buf_7km) %>% 
   mutate(buff_dist = 8000, 
          tipo = "diferença", 
          area_m2 = st_area(geometry), 
          area_km2 = as.numeric(st_area(geometry))/1000000)  %>%
-  select(buff_dist, tipo,area_m2, area_km2)
+  dplyr::select(buff_dist, tipo,area_m2, area_km2)
 
 bind_rows(ad, dif_buf_1km, dif_buf_2km, dif_buf_4km, dif_buf_8km) %>% 
   ggplot() +

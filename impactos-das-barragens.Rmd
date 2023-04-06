@@ -3,6 +3,11 @@ title: "Impactos das barragens"
 author: "Darren Norris"
 date: "`r Sys.Date()`"
 output:
+  bookdown::html_document2:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    fig_caption: yes
   bookdown::pdf_document2:
     toc: yes
     toc_depth: 3
@@ -11,11 +16,6 @@ output:
     highlight: tango
     includes:
       in_header: preamble.txe
-  bookdown::html_document2:
-    toc: yes
-    toc_depth: 3
-    toc_float: yes
-    fig_caption: yes
 urlcolor: blue
 toc-title: Sumário
 header-includes:
@@ -145,16 +145,15 @@ Além do "landscapemetrics", precisamos carregar alguns pacotes a mais para faci
 
 Carregar pacotes (que deve esta instalado antes): 
 ```{r, message=FALSE, warning=FALSE}
+library(landscapemetrics)
 library(tidyverse)
 library(sf)
 library(raster)
 library(terra)
 library(tmap)
-library(gridExtra)
-library(kableExtra)
 library(mapview)
-library(mgcv)
-library(landscapemetrics)
+library(kableExtra)
+
 ```
 
 
@@ -379,9 +378,10 @@ Aqui usamos os dados de 2020 para calcular uma metrica para cada buffer no obeje
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
 metricas_1 <- sample_lsm(landscape = floresta_2020, 
                                  y = ada_buff_31976, 
-                                 plot_id = data.frame(ada_buff_31976)[ , 'minhaid'],
+                                 plot_id = ada_buff_31976$minhaid,
                             metric = "cpland", 
                             edge_depth = 1) 
+
 ```
 
 Depois que executar ("run"), podemos olhar os dados com o codigo a seguir. 
@@ -412,7 +412,7 @@ Aqui mostraremos como incluir cálculos de diferentes métricas de paisagem ao m
 Primeiramente precisamos carregar dados de MapBiomas referentes os anos desejados.
 Neste caso vamos incluir dados de 2012 a 2020, ou seja quantro anos antes e quatro anos depois o enchimento do reservatorio em 2016.
 
-```{r}
+```{r, eval=FALSE}
 # limites 
 myexent <- ext(vect(ada_buff_31976)) 
 # arquivos
@@ -548,6 +548,7 @@ floresta_12a20 <- c(floresta_2012, floresta_2013, floresta_2014,
 
 
 Para incluir cálculos de métricas da paisagem diferentes ao mesmo tempo, precisamos  acrescentar somente uma nova linha de codigo. Uma nova linha, que cria um objeto com os nomes das funções para as métricas que queremos calcular..... Também precisamos usar a opção "what" na função para aceitar os nomes das funções. 
+Os calculos pode levar um tempo (15 minutos até uma hora dependendo o computador) para rodar devido a area (poligono de cada distancia tem > 140 km2).
 
 ```{r, eval=FALSE, message=FALSE, warning=FALSE}
 # Objeto com os nomes das funções para calcular as métricas desejadas.
@@ -556,15 +557,19 @@ minhas_metricas <- c("lsm_c_pland", "lsm_c_ed", "lsm_c_cpland",
                      "lsm_c_pd","lsm_c_cohesion")
 
 # 8 Métricas calculadas para cada distancia e cada ano. 8:09 - 8:17
-# Why six plot ids???
+# Why six plot ids??? - multipolygon with two
 metricas_12a20 <- sample_lsm(floresta_12a20, 
            y = ada_buff_31976,
-           plot_id = data.frame(ada_buff_31976)[ , 'buff_dist'],
+           plot_id = ada_buff_31976$minhaid,
            what = minhas_metricas) 
-#Export
-saveRDS(metricas_12a20, "data/")
 ```
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#Export
+#saveRDS(metricas_12a20, "data/metricas_12a20.RDS")
+metricas_12a20 <- readRDS("data/metricas_12a20.RDS")
+
+```
 
 Depois que executar ("run"), podemos olhar os dados com o codigo a seguir. 
 ```{r, eval=FALSE}
@@ -584,21 +589,7 @@ head(metricas_12a20, n=10) %>%
 Agora, vamos fazer um grafico com as metricas, usando o pacote ggplot2. Para ajudar na visualização incluímos quais métricas são para composição e configuração e nomes que são mais fáceis de entender.
 
 ```{r insert-fig-multiplemetrics, message=FALSE, warning=FALSE}
-metricas_composicao <- c("pland", "ed", "cpland")
-# arrumar dados
-amostras_metricas %>% 
-  filter(class==1) %>%
-  mutate(ext_km = (2*raio)/1000, 
-         met_cat = if_else(metric %in% metricas_composicao, 
-                           "composição", "configuração")) %>%
-# fazer grafico
-  ggplot(aes(x=ext_km, y=value)) + 
-  geom_point() + 
-  geom_line() +
-  facet_wrap(met_cat~metric, scales = "free_y") +
-  labs(title = "Comparação multiescala de várias métricas",
-    x = "extensão (quilômetros)", 
-    y = "metric value")
+
 ```
 
 
