@@ -184,12 +184,10 @@ library(kableExtra)
 
 # Dados
 
-Como esperado houve mudancas na paisagem devido a barragem Cachoeira Caldeirao. Veja as mudanças entre 1985 e 2020 aqui: 
-
-
+Como esperado houve mudancas na paisagem devido a barragem Cachoeira Caldeirao. 
 Para quantificar as mudanças vamos trabalhar com os dados de MapBiomas, anos 2012 - 2020. Anos representado 4 anos antes e 4 anos depois da barragem.
 
-Primeirmante vamos olhar o ano de 2020. Assim para verificar que todo os codigos estão validos antes de rodar para todos os anos.
+Primeirmante vamos olhar o ano de 2020. Assim para verificar que todo os codigos estão validos antes de rodar o processo para todos os anos.
 
 Existem varios formas de importar e exportar dados geoespaciais.
 Aqui, precisamos o arquivo com os dados de MapBiomas "utm_cover_AP_rio_2020.tif", que voces baixaram no tutorial anterior (tutorial Escala https://rpubs.com/darren75/escala).
