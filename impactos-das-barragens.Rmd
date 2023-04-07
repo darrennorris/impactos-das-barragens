@@ -38,7 +38,7 @@ knit_hooks$set(output = function(x, options) {
 \newpage{}
 
 # Apresentação
-As métricas da paisagem nos ajudam a entender as mudanças na paisagem de diferentes perspectivas (visual, ecológica, cultural). Asssim sendo, análises com métricas de paisagem é um atividade fundamental na ecologia da paisagem. Nesta aula ( ) aprenderemos sobre como analisar a cobertura da terra com métricas de paisagem em R. As tecnicas será ilustrada através cálculos usando a cobertura florestal ao redor do Rio Araguari. Ao longo do caminho, aprenderemos sobre manipulação de dados em R e aprenderemos como criar gráficos com o pacote ggplot2.
+As métricas da paisagem nos ajudam a entender as mudanças na paisagem de diferentes perspectivas (visual, ecológica, cultural). Asssim sendo, análises com métricas de paisagem é um atividade fundamental na ecologia da paisagem. Nesta tutorial (https://rpubs.com/darren75/Impactos-das-barragens) aprenderemos sobre como analisar a cobertura da terra com métricas de paisagem em R. As tecnicas será ilustrada através cálculos usando a cobertura florestal ao redor do Rio Araguari. Ao longo do caminho, aprenderemos sobre manipulação de dados em R e aprenderemos como criar gráficos com o pacote ggplot2.
 
 Durante a aula você aprenderá a:  
 
@@ -50,6 +50,29 @@ Durante a aula você aprenderá a:
  
  * Construir gráficos com o pacote [ggplot2](https://ggplot2.tidyverse.org/).
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(sf)
+library(terra)
+library(tmap)
+mapbiomas_2012_2020_ag <- readRDS("data/mapbiomas_2012_2020_ag.RDS")
+rivers <- "data/vector/rivers.gpkg"
+ada_31976_linha <- sf::st_read(rivers, layer = "direct_affect_line") %>% 
+  st_transform(31976)
+# colour legend from 01_prep_animation
+class_color <- readRDS("data/class_color.RDS")
+# Make plot for animation
+tm_ani <- tm_shape(mapbiomas_2012_2020_ag) + 
+  tm_raster(style = "cat", 
+            palette = class_color, legend.show =FALSE)  +
+  tm_shape(ada_31976_linha) + 
+  tm_lines(col = "yellow", lwd = 2) +
+  tm_facets(ncol=1, nrow=1) 
+```
+
+```{r fig.show='animate', animation.hook="gifski", echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Mudanças na cobertura da terra ao redor da barragem Cahoeira Caldeirao. Mostrando a Área Diretamente Afetada (linha amarela)."}
+
+tm_ani
+```
  
 
 # Codigo e R
@@ -160,6 +183,13 @@ library(kableExtra)
 \newpage
 
 # Dados
+
+Como esperado houve mudancas na paisagem devido a barragem Cachoeira Caldeirao. Veja as mudanças entre 1985 e 2020 aqui: 
+
+
+Para quantificar as mudanças vamos trabalhar com os dados de MapBiomas, anos 2012 - 2020. Anos representado 4 anos antes e 4 anos depois da barragem.
+
+Primeirmante vamos olhar o ano de 2020. Assim para verificar que todo os codigos estão validos antes de rodar para todos os anos.
 
 Existem varios formas de importar e exportar dados geoespaciais.
 Aqui, precisamos o arquivo com os dados de MapBiomas "utm_cover_AP_rio_2020.tif", que voces baixaram no tutorial anterior (tutorial Escala https://rpubs.com/darren75/escala).
@@ -412,7 +442,154 @@ Aqui mostraremos como incluir cálculos de diferentes métricas de paisagem ao m
 Primeiramente precisamos carregar dados de MapBiomas referentes os anos desejados.
 Neste caso vamos incluir dados de 2012 a 2020, ou seja quantro anos antes e quatro anos depois o enchimento do reservatorio em 2016.
 
-```{r, eval=FALSE}
+Deve baixar os anos desjados (arqivos .tif) aqui 
+link: [https://github.com/darrennorris/impactos-das-barragens/tree/main/data/mapbiomas_AP_utm_rio](https://github.com/darrennorris/impactos-das-barragens/tree/main/data/mapbiomas_AP_utm_rio){target="_blank"} 
+
+Lembrando-se de salvar os arquivos em um local conhecido no seu computador. Agora, nós podemos carregar os dados de cobertura da terra "utm_cover_AP_rio_....tif" com a função <code>rast</code>.
+```{r eval=FALSE}
+# limites 
+myexent <- ext(vect(ada_buff_31976)) 
+# arquivos
+# utm_cover_AP_rio_2012.tif
+rin_12 <- file.choose()
+# utm_cover_AP_rio_2013.tif
+rin_13 <- file.choose()
+# utm_cover_AP_rio_2014.tif
+rin_14 <- file.choose()
+# utm_cover_AP_rio_2015.tif
+rin_15 <- file.choose()
+# utm_cover_AP_rio_2016.tif
+rin_16 <- file.choose()
+# utm_cover_AP_rio_2017.tif
+rin_17 <- file.choose()
+# utm_cover_AP_rio_2018.tif
+rin_18 <- file.choose()
+# utm_cover_AP_rio_2019.tif
+rin_19 <- file.choose()
+# utm_cover_AP_rio_2020.tif
+rin_20 <- file.choose()
+
+#Agora carregar. Inclundo somente a região de interesse.
+mapbiomas_2012 <- rast(rin_12) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2013 <- rast(rin_13) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2014 <- rast(rin_14) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2015 <- rast(rin_15) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2016 <- rast(rin_16) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2017 <- rast(rin_17) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2018 <- rast(rin_18) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2019 <- rast(rin_19) %>% 
+  crop(myexent, snap="out")
+mapbiomas_2020 <- rast(rin_20) %>% 
+  crop(myexent, snap="out")
+```
+
+E agora precisamos reptir o processo de reclassificação para cada ano.
+```{r eval=FALSE}
+# Reclassificação - 
+# Criar uma nova camada "floresta" (novo objeto de raster copiando mapbiomas_ , 
+# assim para ter os mesmos coordenados, resolução e extensão). Cada ano pode incluir
+# até 4 classes: 1 = floresta, 33 = agua, 11 =campo alagado, 0 = outro
+floresta_2012 <- mapbiomas_2012
+# Todos os pixels com valor de 0
+values(floresta_2012) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2012[mapbiomas_2012==3 | mapbiomas_2012==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2012[mapbiomas_2012==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2012[mapbiomas_2012==11] <- 11 
+#2013
+floresta_2013 <- mapbiomas_2013
+# Todos os pixels com valor de 0
+values(floresta_2013) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2013[mapbiomas_2013==3 | mapbiomas_2013==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2013[mapbiomas_2013==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2013[mapbiomas_2013==11] <- 11 
+#2014
+floresta_2014 <- mapbiomas_2014
+# Todos os pixels com valor de 0
+values(floresta_2014) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2014[mapbiomas_2014==3 | mapbiomas_2014==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2014[mapbiomas_2014==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2014[mapbiomas_2014==11] <- 11 
+#2015
+floresta_2015 <- mapbiomas_2015
+# Todos os pixels com valor de 0
+values(floresta_2015) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2015[mapbiomas_2015==3 | mapbiomas_2015==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2015[mapbiomas_2015==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2015[mapbiomas_2015==11] <- 11 
+#2016
+floresta_2016 <- mapbiomas_2016
+# Todos os pixels com valor de 0
+values(floresta_2016) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2016[mapbiomas_2016==3 | mapbiomas_2016==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2016[mapbiomas_2016==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2016[mapbiomas_2016==11] <- 11 
+#2017
+floresta_2017 <- mapbiomas_2017
+# Todos os pixels com valor de 0
+values(floresta_2017) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2017[mapbiomas_2017==3 | mapbiomas_2017==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2017[mapbiomas_2017==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2017[mapbiomas_2017==11] <- 11 
+#2018
+floresta_2018 <- mapbiomas_2018
+# Todos os pixels com valor de 0
+values(floresta_2018) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2018[mapbiomas_2018==3 | mapbiomas_2018==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2018[mapbiomas_2018==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2018[mapbiomas_2018==11] <- 11 
+#2019
+floresta_2019 <- mapbiomas_2019
+# Todos os pixels com valor de 0
+values(floresta_2019) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2019[mapbiomas_2019==3 | mapbiomas_2019==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2019[mapbiomas_2019==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2019[mapbiomas_2019==11] <- 11 
+#2020
+floresta_2020 <- mapbiomas_2020
+# Todos os pixels com valor de 0
+values(floresta_2020) <- 0
+# Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
+floresta_2020[mapbiomas_2020==3 | mapbiomas_2020==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2020[mapbiomas_2020==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2020[mapbiomas_2020==11] <- 11
+```
+
+
+
+```{r, eval=FALSE, echo=FALSE}
 # limites 
 myexent <- ext(vect(ada_buff_31976)) 
 # arquivos
@@ -557,8 +734,7 @@ minhas_metricas <- c("lsm_c_pland", "lsm_c_ed", "lsm_c_cpland",
                      "lsm_c_enn_mn", "lsm_c_enn_sd", "lsm_c_enn_cv", 
                      "lsm_c_pd","lsm_c_cohesion")
 
-# 8 Métricas calculadas para cada distancia e cada ano. 8:09 - 8:17
-# Why six plot ids??? - multipolygon with two
+# 8 Métricas calculadas para cada distancia e cada ano.
 metricas_12a20 <- sample_lsm(floresta_12a20, 
            y = ada_buff_31976,
            plot_id = ada_buff_31976$minhaid,
@@ -587,10 +763,128 @@ head(metricas_12a20, n=10) %>%
   kable_styling(full_width = F,  latex_options = "hold_position")
 ```
 
-Agora, vamos fazer um grafico com as metricas, usando o pacote ggplot2. Para ajudar na visualização incluímos quais métricas são para composição e configuração e nomes que são mais fáceis de entender.
+Primeiramente vamos comparar as mudancas na cobertura entre 2012 e 2020.
+Precisamos fazer alguns ajustes e melhorias para que os dados ficam claros nos graficos.
+```{r trata-dados}
 
-```{r insert-fig-multiplemetrics, message=FALSE, warning=FALSE}
+res_metricas <- metricas_12a20 %>% 
+  left_join(data.frame(ada_buff_31976) %>% 
+              dplyr::select(minhaid, tipo, buff_dist, area_km2), 
+            by = c("plot_id" = "minhaid") 
+            ) %>% 
+   dplyr::mutate(ano = case_when(layer == 1 ~ 2012, 
+                          layer == 2 ~ 2013, 
+                          layer == 3 ~ 2014, 
+                          layer == 4 ~ 2015, 
+                          layer == 5 ~ 2016, 
+                          layer == 6 ~ 2017, 
+                          layer == 7 ~ 2018,
+                          layer == 8 ~ 2019, 
+                          layer == 9 ~ 2020
+                          ), 
+                 classe = case_when( 
+                   class == 0 ~"outra", 
+                   class == 1 ~"floresta", 
+                   class == 33 ~"agua", 
+                   class == 11 ~"alagado")
+          )
 
 ```
 
+
+Plotar.
+Aqui apresentando resultados da metrica `r kableExtra::text_spec("cpland", background = "#dedede")` que é o percentual de área central - “core area” para cada classe, como vimos na aula teórica. Percentual de áreas centrais (excluídas as bordas de 30 m) em relação à área total da paisagem.
+```{r, fig.width=7, fig.height=3, fig.cap="Mudanças de cobertura florestal na Área Diretamente Afetada (ADA)."}
+res_metricas %>% 
+  filter(tipo == "original", metric %in% c("pland" ,"cpland")) %>% 
+  mutate(nome_metrica = case_when(metric == "pland" ~"total", 
+                                  metric== "cpland" ~"área central")) %>%
+ggplot(aes(x=ano, y=value)) + 
+  geom_vline(aes(xintercept=2016), linewidth=2, colour="yellow") +
+  stat_smooth(aes(colour=classe), linetype="dashed", se=FALSE) +
+  geom_point(aes(fill=classe), shape=21, size =2) + 
+  scale_fill_manual(values = c("blue", "green", "grey70")) + 
+  scale_colour_manual(values = c("blue", "green", "grey70")) + 
+  coord_cartesian(y=c(0,60)) + 
+  facet_wrap(~nome_metrica) +
+  labs(x="Ano", 
+       y="Cobertura (% da paisagem)")
+  
+```
+
+
+
+
+Agora, vamos fazer uma comparação enter as distancias diferentes. 
+Para isso, precisamos fazer pequenos mudanças somente em 4 linhas do codigo anterior.
+
+```{r, insert-fig-dist, message=FALSE, warning=FALSE}
+
+res_metricas %>% 
+  filter(metric %in% c("pland" ,"cpland")) %>% 
+  mutate(nome_metrica = case_when(metric == "pland" ~"total", 
+                                  metric== "cpland" ~"área central")) %>%
+ggplot(aes(x=ano, y=value)) + 
+  geom_vline(aes(xintercept=2016), linewidth=2, colour="yellow") +
+  stat_smooth(aes(colour=classe), linetype="dashed", se=FALSE) +
+  geom_point(aes(fill=classe), shape=21, size =2) + 
+  scale_fill_manual(values = c("blue", "aquamarine2", "#129912", "grey70")) + 
+  scale_colour_manual(values = c("blue", "aquamarine2","#129912", "grey70")) + 
+  facet_grid(buff_dist ~ nome_metrica, scales = "free_y") +
+  labs(x="Ano", 
+       y="Cobertura (% da paisagem)")
+```
+
+```{r}
+
+res_metricas %>% 
+  filter(metric == "cpland", classe %in% c("agua", "floresta")) %>% 
+  mutate(nome_metrica = case_when(metric== "cpland" ~"área central")) %>% 
+  pivot_wider(id_cols = c(nome_metrica, buff_dist, ano), 
+              names_from = classe, values_from = value) %>% 
+  mutate(quando = case_when(ano %in% c(2012, 2013, 2014, 2015) ~"antes", 
+                           ano %in% c(2017, 2018, 2019, 2020) ~"depois")) %>%
+  filter(!is.na(quando)) -> antes_depois
+
+
+```
+
+Calcular medianos.
+```{r calc-median}
+medianos <- antes_depois %>% 
+  group_by(buff_dist, quando) %>% 
+  summarise(mediano_floresta = median(floresta), 
+          mediano_agua = median(agua))
+
+```
+
+Plot.
+```{r, fig.cap="Resultados apresentados incorretamente."}
+antes_depois %>%
+ggplot(aes(x=agua, y=floresta)) + 
+  stat_smooth(method="lm", colour="black", linetype="dashed", se=FALSE) +
+  geom_hline(data = medianos, aes(yintercept = mediano_floresta, 
+                                  colour=quando), 
+             linetype="dashed") +
+  geom_point(aes(fill=quando), shape=21, size =2) + 
+  facet_wrap(~buff_dist, scales = "free") +
+  labs(x="Agua (% da paisagem)", 
+       y="Floresta (% da paisagem)")
+```
+
+Agora a forma de apresentação mais adequado para comunicar os resultados obtidos.
+Mudancas simples no eixos para facilitar interpretação mais clara e robusto.
+```{r, fig.cap="Comparação entre floresta e agua nos anos antes (2012-2015) e depois (2017-2020) o enchemento do reservatorio barragem Cachoeira Caldeirão. Valores anuais apresentados (pontos) são a proporção de aréa central na paisagem (%) para as classes de floresta e agua. Comparando valores na Àrea Diretamente Afetada (ADA) e em 4 distancias (metros) alem da ADA. Linhas horizontais pontilados representam os valores medianos dos anos antes e depois para cada distancia. As linhas pretas pontilados são da regressao linear entre a aréa central de agua e floresta na paisagem."}
+antes_depois %>%
+ggplot(aes(x=agua, y=floresta)) + 
+  stat_smooth(method="lm", colour="black", linetype="dashed", se=FALSE) +
+  geom_hline(data = medianos, aes(yintercept = mediano_floresta, 
+                                  colour=quando), 
+             linetype="dashed") +
+  geom_point(aes(fill=quando), shape=21, size =2) + 
+  coord_cartesian(y=c(0,70)) +
+  facet_wrap(~buff_dist, scales = "free_x") +
+  labs(x="Agua (% da paisagem)", 
+       y="Floresta (% da paisagem)")
+```
 
