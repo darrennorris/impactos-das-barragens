@@ -886,3 +886,15 @@ ggplot(aes(x=agua, y=floresta)) +
        y="Floresta (% da paisagem)")
 ```
 
+#  Conclusões e próximos passos
+
+Os resultados apresentados na figura anterior não segam os resultados esperados que a cobertura de agua ia aumentar alem dos limites do ADA.
+Para entender melhor os padores, precisamos: 
+
+ * APlicar testes estatisticos
+ * Verficar padrões nas outras metricas calculados
+ * Verficar padrões com mais anos 
+ * Verficar padrões com abordagens alternativas como buffers ao redor dos rios:
+ Cochrane et al. 2017. Landsat-based analysis of mega dam flooding impacts in the Amazon compared to associated environmental impact assessments: Upper Madeira River example 2006–2015. https://doi.org/10.1016/j.rsase.2017.04.005
+Li et al. 2020. Examining Water Area Changes Accompanying Dam Construction in the Madeira River in the Brazilian Amazon  https://doi.org/10.3390/w12071921
+ 
