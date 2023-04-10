@@ -199,13 +199,18 @@ Lembrando-se de salvar o arquivo ("utm_cover_AP_rio_2020.tif") em um local conhe
 # Selecionar e carregar arquivo "utm_cover_AP_rio_2020.tif"
 mapbiomas_2020 <- rast(file.choose())
 # Reclassificação - 
-# Criar uma nova camada de floresta (novo objeto de raster copiando mapbiomas_2020, 
+# Criar uma nova camada de floresta e agua 
+# (floresta_2020 novo objeto de raster copiando mapbiomas_2020, 
 # assim para ter os mesmos coordenados, resolução e extensão)
 floresta_2020 <- mapbiomas_2020
 # Todos os pixels com valor de 0
 values(floresta_2020) <- 0
 # Atualizar com valor de 1 quando pixels originais são de floresta (classe 3 e 4)
 floresta_2020[mapbiomas_2020==3 | mapbiomas_2020==4] <- 1 
+# Atualizar com valor de 33 quando pixels originais são de agua
+floresta_2020[mapbiomas_2020==33] <- 33 
+# Atualizar com valor de 11 quando pixels originais são de Campo Alagado
+floresta_2020[mapbiomas_2020==11] <- 11 
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -256,12 +261,12 @@ tm_layout(legend.bg.color = "white")
 ```
 
 ## Exibir dados raster e sobreposição com uma região de interesse
-Agora temos a paisagem, precisamos tambem a região de interesse (area de estudo). Por isso, precisamos carregar os dados de rios que usamos no tutorial [Escala](https://rpubs.com/darren75/escala) - arquivo "rivers.GPKG". 
+Agora temos a paisagem, precisamos tambem a região de interesse (area de estudo). Por isso, precisamos carregar os dados de rios que usamos no tutorial [Escala](https://rpubs.com/darren75/escala) - arquivo "rivers.gpkg". 
 
-Baixar o arquivo Link: [https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG](https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.GPKG){target="_blank"} .
+Baixar o arquivo Link: [https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.gpkg](https://github.com/darrennorris/gisdata/blob/master/inst/vector/rivers.gpkg){target="_blank"} .
 Lembrando-se de salvar o arquivo ("rivers.GPKG")  em um local conhecido no seu computador. 
 
-Agora, com o proximo bloco de codigo, podemos selecionar o arquivo "rivers.GPKG", e carregar as camadas necessarios.
+Agora, com o proximo bloco de codigo, podemos selecionar o arquivo "rivers.gpkg", e carregar as camadas necessarios.
 
 No exemplo, usamos `r kableExtra::text_spec("%>%", bold = TRUE)`, que estabelece a ligação entre os passos do processo. Ou seja, `r kableExtra::text_spec("%>%", bold = TRUE)` passa o objeto resultante automaticamente para a próxima função como primeiro argumento. 
 Primeiramente carregamos os dados e em seguida converter (reprojeção) as coordenadas para o mesmo sistema de referência que o arquivo raster (com a função st_transform). 
